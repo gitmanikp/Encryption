@@ -1,32 +1,58 @@
 package main
 
 import (
-	"encoding/base64"
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"fmt"
+	"log"
+
+	"github.com/google/uuid"
 )
 
 func main() {
-	msg := " Hello there my friend"
-	encoded := encode(msg)
-	fmt.Println("Encoded Message", encoded)
+	//msg := " Hello there my friend"
+	ranGen := uuid.New().String()
+	ranByt := []byte(ranGen)
+	ranByt = ranByt[:16]
 
-	s, err := decode(encoded)
+	msg := "Hello this is my message for encrytion and decryption"
+
+	rslt, err := encDec(ranByt, msg)
 	if err != nil {
-		fmt.Println(" error outputing decoded message")
+		log.Panic(" Error while printing the result value!!")
 	}
 
-	fmt.Println("our Decoded message ", s)
-}
+	fmt.Println(string(rslt))
 
-func encode(msg string) string {
-	return base64.StdEncoding.EncodeToString([]byte(msg))
-}
-
-func decode(encoded string) (string, error) {
-	s, err := base64.URLEncoding.DecodeString(encoded)
+	rslt2, err := encDec(ranByt, string(rslt))
 	if err != nil {
-		return "", fmt.Errorf("decoding failed: %w", err)
+		log.Panic(" Error while printing the result value!!")
+	}
+	fmt.Println(string(rslt2))
+}
+
+func encDec(key []byte, input string) ([]byte, error) {
+	b, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't new cipher %w", err)
 	}
 
-	return string(s), nil
+	iv := make([]byte, aes.BlockSize)
+
+	s := cipher.NewCTR(b, iv)
+
+	buff := &bytes.Buffer{}
+	sw := cipher.StreamWriter{
+		S: s,
+		W: buff,
+	}
+
+	_, err = sw.Write([]byte(input))
+	if err != nil {
+		return nil, fmt.Errorf(" error while doing sw.write %w", err)
+	}
+
+	return buff.Bytes(), nil
+
 }
